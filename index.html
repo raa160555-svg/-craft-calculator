@@ -1,0 +1,129 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>クラフト素材計算機</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--card:#f3f5f8;--line:#d5dae2;--ac:#2f6fdb;--mu:#666;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16181d;--fg:#e8e8e8;--card:#22262e;--line:#3a404c;--ac:#6ea0ff;--mu:#a0a6b2}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;padding:12px;padding-bottom:40px}
+h1{font-size:18px;margin:0 0 8px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tabs button,.reset{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:16px;padding:5px 12px;font-size:14px}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+input[type=search]{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font-size:16px}
+.row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.row .n{flex:1;min-width:0}.row small{display:block;color:var(--mu);font-size:12px}
+.q{display:flex;align-items:center;gap:4px}
+.q button{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:18px}
+.q input{width:44px;text-align:center;padding:5px 2px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font-size:16px}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0}
+.sum h2{font-size:16px;margin:0 0 6px}
+.mat{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dotted var(--line)}
+.tot{font-size:18px;font-weight:700;color:var(--ac)}
+.note{color:var(--mu);font-size:12px}
+</style></head><body>
+<h1>🔧 クラフト素材計算機</h1>
+<div class="sum"><h2>必要素材の合計</h2><div id="mats" class="note">作りたい数を入力してください</div>
+<h2 style="margin-top:10px">市営武器屋価格の合計</h2><div class="tot" id="price">0円</div>
+<div class="note" id="np"></div><button class="reset" onclick="clr()" style="margin-top:8px">全てリセット</button></div>
+<input type="search" id="s" placeholder="名前で検索" oninput="draw()">
+<div class="tabs" id="tabs"></div><div id="list"></div>
+<p class="note">※素材は表の「最コスパ」レシピ基準です。「現金」は素材として集計。ツール類は市営武器屋価格がないため価格合計に含まれません。画像から書き起こしたため、数値は元表と照合してください。</p>
+<script>
+const D=`弾|45ACP弾|1500|鉄:60
+弾|9mm弾|1500|銅:62
+弾|5.56弾|1500|メタスク:62
+弾|7.62弾||メタスク:46
+装備|サイバーアクアパルス||ゴム:120,ガラス:140,プラ:200,アルミ:180,銅:150,スチール:130
+装備|アーマー(75%)|315000|布:200,プラ:400,紙:40,現金:80000,スチール:400
+装備|ヘビーアーマー(100%)|525000|アルミ:180,メタスク:150,ゴム:130
+武器|ワルサーP99||ガラス:150,プラ:300,鉄:300,現金:200000
+武器|ヘビーピストル|700000|ガラス:150,銅:300,メタスク:300,現金:200000
+武器|APピストル|980000|ガラス:150,メタスク:500
+武器|VD SUPPRESSED GROCK|7000000|ガラス:750,鉄:600,アルミ:400,銀インゴット:300,金インゴット:300,現金:500000
+武器|マイクロSMG|1260000|ガラス:150,ゴム:200,アルミ:200,現金:192000
+武器|コンバットSMG MK2 GRAVEYARD||ガラス:350,アルミ:300,スチール:600,メタスク:300,現金:106250
+武器|アサルトSMG OMEX||ガラス:350,鉄:500,銅:600,メタスク:300,現金:812500
+武器|R99|1820000|ガラス:150,ゴム:200,プラ:300,鉄:300,現金:31250,メタスク:100
+武器|UMP45|4000000|ガラス:150,スチール:300,鉄:200,現金:62500,メタスク:300
+武器|UZI|1820000|ガラス:150,ゴム:200,プラ:300,鉄:300,現金:37500,メタスク:200
+武器|アサルトライフルMK2|1960000|ガラス:150,メタスク:300,銅:300,鉄:300,現金:25000
+武器|ブルパップライフル|2240000|ガラス:150,銅:300,スチール:300,メタスク:300
+武器|ブルパップライフルMK2|3080000|ガラス:150,ゴム:400,銅:500,アルミ:200,現金:80000,スチール:300,メタスク:300
+武器|カービンライフル|1400000|ガラス:150,銅:300,アルミ:300,現金:220000,鉄:300,メタスク:300
+武器|カービンライフルMK2|2240000|ガラス:150,銅:300,現金:500000,鉄:300,メタスク:300
+武器|スペシャルカービンライフルMK2|2100000|ガラス:150,現金:250000,メタスク:300
+武器|スペシャルカービンMK2 OMEX||ガラス:650,鉄:500,銅:600,現金:687500,メタスク:300
+武器|SFAK|3080000|ガラス:150,鉄:100,銅:100,アルミ:100,スチール:100,メタスク:300,プラ:100,現金:500000
+武器|G36|2240000|ガラス:150,スチール:30,鉄:200,現金:1000000,メタスク:300
+武器|FAMASU 1|3080000|ガラス:150,プラ:300,銅:200,アルミ:200,現金:250000,スチール:400,メタスク:300
+武器|AK47|4200000|ガラス:150,ゴム:300,銅:300,スチール:400,現金:1062500,メタスク:300
+武器|AK47S|3080000|ガラス:150,銅:300,鉄:200,現金:687500,メタスク:300
+武器|AK4K|3080000|ガラス:150,銅:300,鉄:200,現金:812500,メタスク:300
+武器|AKBG|2800000|ガラス:150,ゴム:300,プラ:300,現金:275000,鉄:300,メタスク:300
+武器|AK47 レッドクロミウム|4200000|ガラス:150,銅:200,アルミ:300,現金:750000,メタスク:200
+武器|M4 タクティカルレッド|3080000|ガラス:150,スチール:400,アルミ:300,現金:106250,メタスク:300
+武器|ZETA 19 CHR|1400000|ガラス:150,銅:300,鉄:500
+武器|Galil AR|4200000|ガラス:150,アルミ:300,現金:162500,スチール:300,メタスク:300
+武器|HFSMGV2|2800000|ガラス:150,ゴム:200,銅:200,メタスク:200
+武器|IDW|1820000|ガラス:150,鉄:300,銅:100,アルミ:300,スチール:300,メタスク:300,プラ:300,現金:475000
+武器|SUNDA|3080000|ガラス:150,鉄:500,銅:300,プラ:100,スチール:100,メタスク:500,現金:500000
+武器|FAR|2240000|ガラス:150,スチール:300,アルミ:300,現金:437500,鉄:30,メタスク:300
+アタッチ|ヘビーバレル|175000|鉄:80,スチール:82
+アタッチ|グリップ|175000|プラ:84,鉄:84
+アタッチ|拡張ピストルマガジン|175000|プラ:80,鉄:66
+アタッチ|拡張SMGマガジン|175000|アルミ:40
+アタッチ|拡張ライフルマガジン|175000|アルミ:42
+アタッチ|マイクロスコープ|175000|プラ:88,ガラス:88
+アタッチ|スモールスコープ|175000|鉄:64,ガラス:62
+アタッチ|ミディアムスコープ|175000|鉄:132,ガラス:122
+アタッチ|サプレッサー|210000|プラ:90,ゴム:66,鉄:86
+アタッチ|タクティカルサプレッサー|350000|プラ:84,ゴム:60,鉄:174
+道具|ロックピック||鉄:20
+道具|ロープ||ゴム:62
+道具|ハックUSB||プラ:82,ゴム:44,メタスク:96
+道具|hack card||ガラス:86,紙:108
+道具|バッグ||ガラス:86,プラ:68
+道具|グラインダー||プラ:88,メタスク:90,スチール:80
+道具|カッター||メタスク:162,プラ:206
+道具|ボルトカッター||プラ:84,メタスク:122,スチール:80
+道具|ガラスカッター||ガラス:84,銅:62,アルミ:92
+道具|プラズマカッター||銅:110,ガラス:138,スチール:126
+道具|グラップリングフック||メタスク:96,プラ:82,ゴム:44
+道具|blowtorch||メタスク:96,プラ:82,ゴム:44
+道具|スモールドリル||鉄:84,スチール:106
+道具|DRILL ポータブルドリル||アルミ:200,メタスク:200,鉄:100
+道具|ラージドリル||ガラス:140,銅:104,アルミ:120
+道具|yachtドリル||アルミ:64,銅:102,スチール:72
+道具|thermite||赤硫黄:20,スチール:86
+道具|cs thermite||アルミ:122,銅:130,スチール:126
+道具|bt C4||ガラス:82,アルミ:70
+道具|cs C4||ガラス:86,プラ:72
+道具|bomb C4||アルミ:126,赤硫黄:24,銅:110
+道具|C4 bomb||アルミ:88,メタスク:92,鉄:40
+道具|C4||ガラス:200,鉄:150
+道具|Explosives||アルミ:82,鉄:86,スチール:82
+道具|big bomb||アルミ:142,銅:102,スチール:128,赤硫黄:32
+道具|bt ガスタンク||ガラス:94,アルミ:70
+道具|bt ハックデバイス||プラ:66,メタスク:94
+道具|Crowbar バール||ガラス:200,プラ:150
+道具|pliers ペンチ||鉄:90,銅:82,メタスク:94
+道具|ハッキングデバイス||鉄:72,メタスク:92,アルミ:106
+道具|ラップトップH||プラ:48,銅:82,メタスク:44
+道具|X-device||アルミ:62,メタスク:110,鉄:70
+道具|X-phone||アルミ:72,メタスク:82,鉄:62
+道具|スモークグレネード||アルミ:150,鉄:200
+道具|digiscanner||プラ:262,メタスク:178
+道具|WELD 溶接機||プラ:150,銅:200`.split("\n").map((l,i)=>{const[c,n,p,m]=l.split("|");const mat={};m.split(",").forEach(x=>{const[k,v]=x.split(":");mat[k]=+v});return{id:i,c,n,p:p?+p:0,mat}});
+const cats=["武器","弾","装備","アタッチ","道具"];let cur="武器";const Q={};
+const $=id=>document.getElementById(id),f=n=>n.toLocaleString("ja-JP");
+function tabs(){$("tabs").innerHTML=cats.map(c=>`<button class="${c==cur?"on":""}" onclick="cur='${c}';tabs();draw()">${c}</button>`).join("")}
+function draw(){const s=$("s").value.trim().toLowerCase();
+$("list").innerHTML=D.filter(d=>s?d.n.toLowerCase().includes(s):d.c==cur).map(d=>`<div class="row"><div class="n">${d.n}<small>${d.p?f(d.p)+"円":"価格なし"} / ${Object.entries(d.mat).map(([k,v])=>k+v).join(" ")}</small></div><div class="q"><button onclick="ch(${d.id},-1)">−</button><input type="number" min="0" inputmode="numeric" id="q${d.id}" value="${Q[d.id]||0}" onchange="set(${d.id},this.value)"><button onclick="ch(${d.id},1)">＋</button></div></div>`).join("")}
+function ch(i,x){set(i,(Q[i]||0)+x)}
+function set(i,v){Q[i]=Math.max(0,parseInt(v)||0);const e=$("q"+i);if(e)e.value=Q[i];calc()}
+function clr(){for(const k in Q)delete Q[k];draw();calc()}
+function calc(){const m={};let p=0,np=[];D.forEach(d=>{const q=Q[d.id]||0;if(!q)return;for(const k in d.mat)m[k]=(m[k]||0)+d.mat[k]*q;if(d.p)p+=d.p*q;else np.push(d.n)});
+const e=Object.entries(m);$("mats").innerHTML=e.length?e.map(([k,v])=>`<div class="mat"><span>${k}</span><b>${f(v)}</b></div>`).join(""):"作りたい数を入力してください";
+$("price").textContent=f(p)+"円";$("np").textContent=np.length?"価格なしのため除外: "+np.join("、"):""}
+tabs();draw();
+</script></body></html>
